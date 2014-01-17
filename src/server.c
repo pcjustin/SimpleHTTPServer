@@ -41,8 +41,8 @@ void doprocessing (int sock)
 	char recvBuffer[1024];
 	int recvSize = 0, dataSize = 0, DataLength = 0;
 
-	memset(recvBuffer, '\0', sizeof(recvBuffer));
 	while (1) {
+		memset(recvBuffer, '\0', sizeof(recvBuffer));
 		recvSize = recv(sock, recvBuffer, sizeof(recvBuffer), 0);
 		if (recvSize > 0) {
 			char sContentLength[16];
@@ -62,7 +62,11 @@ void doprocessing (int sock)
 					perror("copy data buffer to temp data buffer");
 					break;
 				}
-				pData = (char *)realloc((char*)pData, DataLength + recvSize);
+				pData = (char *)realloc((char*)pData, DataLength + recvSize+1);
+				if (pData == NULL) {
+					perror("allocate memory to data buffer");
+					break;
+				}
 				if (memcpy(pData, pTempData, DataLength) == NULL) {
 					perror("copy temp data buffer to data buffer");
 					break;
@@ -71,6 +75,7 @@ void doprocessing (int sock)
 					perror("copy receive buffer to data buffer");
 					break;
 				}
+				DataLength += recvSize;
 				if (pTempData != NULL) {
 					free(pTempData);
 					pTempData = NULL;
@@ -84,16 +89,6 @@ void doprocessing (int sock)
 				}
 			}
 
-			pData = (char *)malloc(recvSize);
-			DataLength = recvSize;
-			if (pData == NULL) {
-				perror("allocate memory to data buffer");
-				break;
-			}
-			if (memcpy(pData, recvBuffer, recvSize) == NULL) {
-				perror("copy receive buffer to data buffer");
-				break;
-			}
 			sscanf(pch, "%*s%[^\r]\r\n", sContentLength);
 			if (sContentLength == NULL) {
 				perror("Parsing HTTP header failed!");
@@ -105,13 +100,23 @@ void doprocessing (int sock)
 			if (dataSize >= contentLength) {
 				break;
 			}
+			pData = (char *)malloc(recvSize+1);
+			if (pData == NULL) {
+				perror("allocate memory to data buffer");
+				break;
+			}
+			DataLength = recvSize;
+			if (memcpy(pData, recvBuffer, recvSize) == NULL) {
+				perror("copy receive buffer to data buffer");
+				break;
+			}
 		} else if (recvSize == 0) {
 			fprintf(stderr, "Client is closing connection or the connection time out\n");
 			close(sock);
 			break;
 		}
 	}
-	fprintf(stderr, "Data = \n%s\n", pData);
+	pData[DataLength] = '\0';
 	
 	if (pData != NULL) {
 		free(pData);

